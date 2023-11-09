@@ -7,28 +7,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def extract_file(html_text):
-    date_times = []
-    locations = []
-    for text in html_text.split("<h3 class=\"alertTableDate\">")[1:]:
-        cur_date = re.findall("\d\d\.\d\d\.\d\d\d\d", text)[0]
-        cur_date = cur_date.split(".")
-        for line in text.split("<h5 class=\"alertTableTime\">")[1:]:
-            time, location = re.match("(\d\d:\d\d)</h5>(.*?)</div>", line,re.DOTALL).groups()
-            date_times.append(datetime.datetime(
-                int(cur_date[2]),
-                int(cur_date[1]),
-                int(cur_date[0]),
-                int(time[:2]),
-                int(time[3:])))
-            location = location.replace("\n",",")
-            location = location.replace("\t"," ")
-            location = location.replace("  "," ")
-            location = location.replace("  "," ")
-            location = location.replace("  "," ")
-            locations.append(location)
-    return date_times, locations
-
 def extract_locations_from_row(locations_row):
     locations_list = locations_row.split(",")
     locations_list = [l for l in locations_list if len(l) > 2]
@@ -40,8 +18,36 @@ def extract_locations_from_row(locations_row):
     locations_list = [l for l in locations_list if len(l) > 2]
     return locations_list
 
-date_times:list[datetime.datetime] = []
-locations:list[str] = []
+
+def extract_file(html_text):
+    date_times = []
+    locations = []
+    for text in html_text.split("<h3 class=\"alertTableDate\">")[1:]:
+        cur_date = re.findall("\d\d\.\d\d\.\d\d\d\d", text)[0]
+        cur_date = cur_date.split(".")
+        for line in text.split("<h5 class=\"alertTableTime\">")[1:]:
+            time, location = re.match(
+                "(\d\d:\d\d)</h5>(.*?)</div>", line, re.DOTALL).groups()
+            cur_time = (datetime.datetime(
+                int(cur_date[2]),
+                int(cur_date[1]),
+                int(cur_date[0]),
+                int(time[:2]),
+                int(time[3:])))
+            cur_locations = location.replace("\n", ",")
+            cur_locations = cur_locations.replace("\t", " ")
+            cur_locations = cur_locations.replace("  ", " ")
+            cur_locations = cur_locations.replace("  ", " ")
+            cur_locations = cur_locations.replace("  ", " ")
+            for location in extract_locations_from_row(cur_locations):
+                assert "\n" not in location
+                locations.append(location)
+                date_times.append(cur_time)
+    return date_times, locations
+
+
+date_times: list[datetime.datetime] = []
+locations: list[str] = []
 for file in os.listdir("html_files"):
     with open(os.path.join("html_files", file), "r", encoding="utf-8") as f:
         html_text = f.read()
@@ -53,23 +59,12 @@ for file in os.listdir("html_files"):
                 is_duplicate = True
                 break
         if not is_duplicate:
-            for new_location in extract_locations_from_row(new_locations[i]):
-                date_times.append(new_date_times[i])
-                locations.append(new_location)
+            date_times.append(new_date_times[i])
+            locations.append(new_locations[i])
 
-all_locations = []
-for l in locations:
-    all_locations += l.split(",")
-all_locations = [l for l in all_locations if len(l) > 1]
-for i, l in enumerate(all_locations):
-    if l[0] == " ":
-        all_locations[i] = l[1:]
-    if l[-1] == " ":
-        all_locations[i] = l[:-1]
-all_locations = [l for l in all_locations if len(l) > 1]
-all_locations = np.array(all_locations)
-all_locations_unique = np.unique(all_locations)
-location_alert_distribution = np.array([np.sum(all_locations == l) for l in all_locations_unique])
+all_locations_unique = np.unique(locations)
+location_alert_distribution = np.array(
+    [np.sum(np.array(locations) == l) for l in all_locations_unique])
 sort_permutation = np.argsort(location_alert_distribution)
 all_locations_unique = all_locations_unique[sort_permutation]
 location_alert_distribution = location_alert_distribution[sort_permutation]
