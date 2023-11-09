@@ -7,7 +7,6 @@ import datetime
 
 csv_text = ""
 for i in range(len(date_times)):
-    print(locations[i])
     csv_text += f"{date_times[i]}, {locations[i]}\n"
 
 with open("alert_data_exported_to_csv.csv","w+", encoding="utf-8") as f:

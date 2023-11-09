@@ -29,6 +29,16 @@ def extract_file(html_text):
             locations.append(location)
     return date_times, locations
 
+def extract_locations_from_row(locations_row):
+    locations_list = locations_row.split(",")
+    locations_list = [l for l in locations_list if len(l) > 2]
+    for i, l in enumerate(locations_list):
+        if l[0] == " ":
+            locations_list[i] = l[1:]
+        if l[-1] == " ":
+            locations_list[i] = l[:-1]
+    locations_list = [l for l in locations_list if len(l) > 2]
+    return locations_list
 
 date_times:list[datetime.datetime] = []
 locations:list[str] = []
@@ -43,8 +53,9 @@ for file in os.listdir("html_files"):
                 is_duplicate = True
                 break
         if not is_duplicate:
-            date_times.append(new_date_times[i])
-            locations.append(new_locations[i])
+            for new_location in extract_locations_from_row(new_locations[i]):
+                date_times.append(new_date_times[i])
+                locations.append(new_location)
 
 all_locations = []
 for l in locations:
